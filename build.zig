@@ -33,6 +33,9 @@ pub fn build(b: *std.Build) !void {
     kernel.setLinkerScript(b.path("kernel/linker.ld"));
     b.installArtifact(kernel);
 
+    const check_step = b.step("check", "Check that the project compiles");
+    check_step.dependOn(&kernel.step);
+
     const kernel_step = b.step("kernel", "Build the kernel");
     kernel_step.dependOn(&kernel.step);
 
