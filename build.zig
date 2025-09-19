@@ -75,8 +75,6 @@ pub fn build(b: *std.Build) !void {
 
     const run_cmd_str = &[_][]const u8{
         "qemu-system-i386",
-        // "-s",
-        // "-S",
         "-cdrom",
         iso_path,
         "-debugcon",

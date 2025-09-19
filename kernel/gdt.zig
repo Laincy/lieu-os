@@ -108,13 +108,15 @@ fn lgdt(ptr: *const GdtPtr) void {
         \\pushl $1f
         \\lret
         \\1:
+        \\ movw $0x28, %%ax
+        \\ ltr %%ax
         :
         : [_] "{eax}" (ptr),
         : .{ .bx = true });
 }
 
 var gdt_entries = init: {
-    var res: [5]GdtEntry = undefined;
+    var res: [6]GdtEntry = undefined;
 
     res[0] = std.mem.zeroes(GdtEntry);
 
@@ -183,5 +185,89 @@ pub fn init() void {
     defer log.debug("Finished initializing GDT", .{});
     gdt_ptr.base = @intFromPtr(&gdt_entries[0]);
 
+    gdt_entries[5] = GdtEntry.new(
+        @intFromPtr(&main_tss),
+        @sizeOf(Tss) - 1,
+        .{ .granularity = true },
+        .{
+            .accessed = true,
+            .read_write = false,
+            .dc = false,
+            .executable = true,
+            .system = false,
+            .privilege = 0,
+        },
+    );
+
     lgdt(&gdt_ptr);
 }
+
+/// Task state segment
+pub const Tss = packed struct(u864) {
+    /// The segment selector for the previous task's TSS
+    prev_tss: u16,
+    _reserved: u16 = 0,
+
+    /// Stack pointer for ring 0
+    esp0: u32,
+    /// Segment selector for ring 0
+    ss0: u16,
+    _reserved2: u16 = 0,
+
+    /// Stack pointer for ring 1
+    esp1: u32,
+    /// Segment selector for ring 1
+    ss1: u16,
+    _reserved3: u16 = 0,
+
+    /// Stack pointer for ring 2
+    esp2: u32,
+    /// Segment selector for ring 2
+    ss2: u16,
+    _reserved4: u16 = 0,
+
+    cr3: u32,
+    eip: u32,
+    eflags: u32,
+    eax: u32,
+    ecx: u32,
+    edx: u32,
+    ebx: u32,
+    esp: u32,
+    ebp: u32,
+    esi: u32,
+    edi: u32,
+
+    es: u16,
+    _reserved5: u16 = 0,
+
+    cs: u16,
+    _reserved6: u16 = 0,
+
+    ss: u16,
+    _reserved7: u16 = 0,
+
+    ds: u16,
+    _reserved8: u16 = 0,
+
+    fs: u16,
+    _reserved9: u16 = 0,
+
+    gs: u16,
+    _reserved10: u16 = 0,
+
+    ldtr: u16,
+    _reserved11: u32 = 0,
+
+    iobp: u16,
+    ssp: u32,
+};
+
+// See: https://github.com/ZystemOS/pluto
+/// The main task state segment entry.
+pub const main_tss: Tss = init: {
+    var res = std.mem.zeroes(Tss);
+    res.ss0 = 0x10;
+    res.iobp = @sizeOf(Tss);
+    break :init res;
+};

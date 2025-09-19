@@ -1,5 +1,5 @@
 # Set up the stack
-.section .bootstrap_stack, "aw", @nobits
+.section .stack, "aw", @nobits
 stack_bottom:
 .skip 0x4000
 stack_top:

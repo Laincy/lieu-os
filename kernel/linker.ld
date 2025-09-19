@@ -33,7 +33,7 @@ SECTIONS
 	{
 		*(COMMON)
 		*(.bss)
-		*(.bootstrap_stack)
+		*(.stack)
 	}
 	_kernel_end = .;
 }
