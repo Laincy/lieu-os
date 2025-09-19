@@ -1,0 +1,18 @@
+romimage: file = $BXSHARE/BIOS-bochs-latest
+vgaromimage: file = $BXSHARE/VGABIOS-lgpl-latest.bin
+ata0-master: type=cdrom, path=zig-out/bin/disk.iso, status=inserted
+boot: cdrom
+
+display_library: sdl2, options="gui_debug"
+
+# Target computer is Pentium 4 Northwood but close enough
+cpu: count=1, model=p4_willamette
+megs: 512
+
+# Kept having issues and we don't need sound yet anyways
+sound: driver=dummy
+
+log: bochs.log
+
+magic_break: enabled=1
+port_e9_hack: enabled=1

@@ -4,6 +4,7 @@ comptime {
 
 const std = @import("std");
 const builtin = @import("builtin");
+const gdt = @import("gdt.zig");
 
 const MAGIC = 0xE85250D6;
 const ARCHITECTURE = 0;
@@ -34,10 +35,8 @@ export const multiboot2 align(4) linksection(".multiboot.data") = MultibootHeade
 export fn kmain(mbi: usize) callconv(.c) noreturn {
     std.log.info("System Initialized...", .{});
     std.log.debug("Multiboot Info Addr: 0x{X:0>8}", .{mbi});
-    //
-    // @import("log.zig").myTest() catch unreachable;
 
-    // while (true) {}
+    gdt.init();
 
     std.log.info("Kernel shutting down...", .{});
     while (true) {}

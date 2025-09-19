@@ -91,6 +91,20 @@ pub fn build(b: *std.Build) !void {
     const run_cmd = b.addSystemCommand(run_cmd_str);
     run_cmd.step.dependOn(b.getInstallStep());
 
-    const run_step = b.step("run", "Run the kernel");
+    const run_step = b.step("run", "Run the kernel in QEMU");
     run_step.dependOn(&run_cmd.step);
+
+    const bochs_cmd_str = &[_][]const u8{
+        "bochs",
+        "-f",
+        ".bochsrc",
+        "-q",
+        "-debugger",
+    };
+
+    const bochs_cmd = b.addSystemCommand(bochs_cmd_str);
+    bochs_cmd.step.dependOn(b.getInstallStep());
+
+    const bochs_step = b.step("bochs", "Run the kernel in Bochs");
+    bochs_step.dependOn(&bochs_cmd.step);
 }

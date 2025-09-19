@@ -21,11 +21,14 @@
           name = "lieu dev";
           packages = with pkgs; [
             zig_0_15
-            qemu
             grub2
             xorriso
-            gdb
+
+            qemu
+            bochs
           ];
+
+          BXSHARE = "${pkgs.bochs}/share/bochs";
         };
       }
     );
