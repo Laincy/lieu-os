@@ -1,39 +1,48 @@
 ENTRY (_start)
 
-SECTIONS
-{ . = 0x00100000;
-	/* The kernel will live at 3GB + 1MB in the virtual address space, */
-	/* which will be mapped to 1MB in the physical address space. */
-	/* Note that we page-align the sections. */
+KERNEL_ADDR_OFFSET = 0xC0000000;
+KERNEL_VADDR_START = 0xC0100000;
 
-	_kernel_start = .;
-      /* KEEP(*(.multiboot)) */
-  .multiboot.data : {
-    KEEP(*(.multiboot.data))
+SECTIONS {
+  . = 1M;
+  KERNEL_PHYSADDR_START = .;
+
+  .rodata.boot : {
+    KEEP(*(.rodata.boot))
   }
 
-  .multiboot.text : {
-    KEEP(*(.multiboot.text))
+  .text.boot : {
+    KEEP(*(.text.boot))
   }
 
-	. += 0xC0000000;
-	.text ALIGN (4K) : AT (ADDR (.text) - 0xC0000000)
-	{
-		*(.text)
-	}
-	.rodata ALIGN (4K) : AT (ADDR (.rodata) - 0xC0000000)
-	{
-		*(.rodata)
-	}
-	.data ALIGN (4K) : AT (ADDR (.data) - 0xC0000000)
-	{
-		*(.data)
-	}
-	.bss ALIGN (4K) : AT (ADDR (.bss) - 0xC0000000)
-	{
-		*(COMMON)
-		*(.bss)
-		*(.stack)
-	}
-	_kernel_end = .;
+  . += KERNEL_ADDR_OFFSET;
+
+  .text ALIGN(4K) : AT (ADDR(.text) - KERNEL_ADDR_OFFSET) {
+    *(.text)
+  }
+
+
+  .rodata ALIGN(4K) : AT (ADDR(.rodata) - KERNEL_ADDR_OFFSET) {
+    *(.rodata)
+  }
+
+
+  .data ALIGN(4K) : AT (ADDR(.data) - KERNEL_ADDR_OFFSET) {
+    *(.data)
+  }
+
+
+  .bss ALIGN(4K) : AT (ADDR(.bss) - KERNEL_ADDR_OFFSET) {
+    *(COMMON)
+    *(.bss)
+  }
+
+  .bss.stack ALIGN(4K) : AT (ADDR(.bss.stack) - KERNEL_ADDR_OFFSET) {
+		KERNEL_STACK_START = .;
+		KEEP(*(.bss.stack))
+		KERNEL_STACK_END = .;
+  }
+
+  KERNEL_VADDR_END = .;
+  KERNEL_PHYSADDREND = . - KERNEL_ADDR_OFFSET;
 }

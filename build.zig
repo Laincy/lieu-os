@@ -55,7 +55,7 @@ pub fn build(b: *std.Build) !void {
             iso_dir,
             "/boot",
             " && ",
-            "cp kernel/boot/grub.cfg ",
+            "cp grub.cfg ",
             iso_dir,
             "/boot/grub",
             " && ",

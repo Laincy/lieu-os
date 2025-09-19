@@ -1,40 +1,33 @@
 comptime {
-    asm (@embedFile("boot/boot.s"));
+    _ = @import("boot/boot.zig");
 }
 
+const mb = @import("boot/multiboot.zig");
 const std = @import("std");
 const builtin = @import("builtin");
 const gdt = @import("gdt.zig");
 
-const MAGIC = 0xE85250D6;
-const ARCHITECTURE = 0;
-const HEADER_SIZE = @sizeOf(MultibootHeader);
-
-const EndTag = packed struct {
-    type: u16 = 0,
-    flags: u16 = 0,
-    size: u32 = 8,
-};
-
-const MultibootHeader = extern struct {
-    magic: u32,
-    architecture: u32,
-    header_len: u32,
+const MultiBootHeader = packed struct {
+    magic: i32,
+    flags: i32,
     checksum: i32,
-    endtag: EndTag,
+    _padding: u32 = 0,
 };
 
-export const multiboot2 align(4) linksection(".multiboot.data") = MultibootHeader{
+const ALIGN = 1 << 0;
+const MEMINFO = 1 << 1;
+const MAGIC = 0x1BADB002;
+const FLAGS = ALIGN | MEMINFO;
+
+export const multiboot_header align(4) linksection(".rodata.boot") = MultiBootHeader{
     .magic = MAGIC,
-    .architecture = ARCHITECTURE,
-    .header_len = HEADER_SIZE,
-    .checksum = 0x100000000 - (MAGIC + ARCHITECTURE + HEADER_SIZE),
-    .endtag = EndTag{},
+    .flags = FLAGS,
+    .checksum = -(MAGIC + FLAGS),
 };
 
-export fn kmain(mbi: usize) callconv(.c) noreturn {
+export fn kmain(mbi: *mb.MultibootInfo) noreturn {
     std.log.info("System Initialized...", .{});
-    std.log.debug("Multiboot Info Addr: 0x{X:0>8}", .{mbi});
+    std.log.debug("Multiboot Info Addr: 0x{X:0>8}", .{@intFromPtr(mbi)});
 
     gdt.init();
 
