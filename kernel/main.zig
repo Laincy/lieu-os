@@ -1,58 +1,41 @@
-comptime {
-    _ = @import("boot/boot.zig");
-}
-
-const mb = @import("boot/multiboot.zig");
 const std = @import("std");
 const builtin = @import("builtin");
+
 const gdt = @import("gdt.zig");
 
-const MultiBootHeader = packed struct {
-    magic: i32,
-    flags: i32,
-    checksum: i32,
-    _padding: u32 = 0,
-};
+comptime {
+    _ = @import("boot.zig");
+}
 
-const ALIGN = 1 << 0;
-const MEMINFO = 1 << 1;
-const MAGIC = 0x1BADB002;
-const FLAGS = ALIGN | MEMINFO;
+/// When this is jumped to, we are in the upper half with a minimal page dir
+export fn kmain(mbi_phys_addr: u32) noreturn {
+    const log = std.log.scoped(.kmain);
 
-export const multiboot_header align(4) linksection(".rodata.boot") = MultiBootHeader{
-    .magic = MAGIC,
-    .flags = FLAGS,
-    .checksum = -(MAGIC + FLAGS),
-};
+    _ = mbi_phys_addr;
 
-export fn kmain(mbi: *mb.MultibootInfo) noreturn {
-    std.log.info("System Initialized...", .{});
-    std.log.debug("Multiboot Info Addr: 0x{X:0>8}", .{@intFromPtr(mbi)});
+    log.info("Jumped to higher half, beginning initialization", .{});
 
     gdt.init();
 
-    std.log.info("Kernel shutting down...", .{});
+    log.info("Kernel initialization finished, entering event loop...", .{});
     while (true) {}
 }
 
+// Configure a couple of kernel wide Zig options
+
 pub const std_options: std.Options = .{
-    .logFn = @import("log.zig").logFn,
-    .log_level = switch (builtin.mode) {
-        .Debug => .debug,
-        else => .info,
-    },
+    .logFn = @import("debugcon.zig").logFn,
 };
 
 pub const panic = std.debug.FullPanic(lieuPanic);
-
 fn lieuPanic(msg: []const u8, addr: ?usize) noreturn {
-    if (addr != null) {
-        std.log.err("Kernel Panicked @ 0x{X:0>8}\nReason: {s}", .{ addr.?, msg });
-    } else {
-        std.log.err("Kernel Panicked @ ??\nReason: {s}", .{msg});
-    }
+    const log = std.log.scoped(.panic);
 
-    _ = @import("log.zig").log_writer.flush() catch {};
+    if (addr != null) {
+        log.err("Kernel panicked @ 0x{X:0>8}\nReason: {s}", .{ addr.?, msg });
+    } else {
+        log.err("Kernel Panicked @ ??\nReason: {s}", .{msg});
+    }
 
     while (true) {}
 }

@@ -1,12 +1,35 @@
-//! Primatives and functions for managing the global descriptor table (GDT)
-
 const std = @import("std");
 const log = std.log.scoped(.gdt);
+
+/// Initializes our GDT
+pub fn init() void {
+    log.debug("Initializing GDT", .{});
+    defer log.debug("Finished initializing GDT", .{});
+
+    gdt_ptr.base = @intFromPtr(&gdt_entries[0]);
+
+    gdt_entries[5] = GdtEntry.new(
+        @intFromPtr(&main_tss),
+        @sizeOf(Tss) - 1,
+        .{ .granularity = true },
+        .{
+            .accessed = true,
+            .read_write = false,
+            .dc = false,
+            .executable = true,
+            .system = false,
+            .privilege = 0,
+            .present = true,
+        },
+    );
+
+    lgdt(&gdt_ptr);
+}
 
 /// The access byte field of a GDT table.
 const AccessByte = packed struct(u8) {
     /// Has this segment been accessed? Set by the CPU, don't set menually.
-    accessed: bool = false,
+    accessed: bool,
 
     /// For code segments: Readable bit. If clear, read access is not allowed.
     /// If set ,access is allowed. Write access is never allowed.
@@ -30,13 +53,13 @@ const AccessByte = packed struct(u8) {
 
     /// If clear this is a system segment like the TSS. If unset this is a code
     /// or data segment.
-    system: bool = true,
+    system: bool,
 
     /// THe ring level this segment operates in
     privilege: u2,
 
     /// Is this segment currently loaded in memory.
-    present: bool = true,
+    present: bool,
 };
 
 /// The flag field of a GDT table
@@ -96,7 +119,7 @@ pub const GdtPtr = packed struct {
 fn lgdt(ptr: *const GdtPtr) void {
     // Load the table into the CPU
     asm volatile (
-        \\lgdt (%%eax)
+        \\lgdt (%[gdt_ptr])
         \\movw $0x10, %%bx
         \\movw %%bx, %%ds
         \\movw %%bx, %%es        
@@ -111,7 +134,7 @@ fn lgdt(ptr: *const GdtPtr) void {
         \\ movw $0x28, %%ax
         \\ ltr %%ax
         :
-        : [_] "{eax}" (ptr),
+        : [gdt_ptr] "{eax}" (ptr),
         : .{ .bx = true });
 }
 
@@ -126,10 +149,13 @@ var gdt_entries = init: {
         0xFFFFF,
         .{ .is_32_bit = true },
         .{
+            .accessed = true,
             .read_write = true,
             .dc = false,
             .executable = true,
+            .system = true,
             .privilege = 0,
+            .present = true,
         },
     );
 
@@ -139,10 +165,13 @@ var gdt_entries = init: {
         0xFFFFF,
         .{},
         .{
+            .accessed = true,
             .read_write = true,
             .dc = false,
             .executable = false,
+            .system = true,
             .privilege = 0,
+            .present = true,
         },
     );
 
@@ -150,12 +179,15 @@ var gdt_entries = init: {
     res[3] = GdtEntry.new(
         0x0,
         0xFFFFF,
-        .{},
+        .{ .is_32_bit = true },
         .{
+            .accessed = true,
             .read_write = true,
             .dc = false,
             .executable = true,
+            .system = true,
             .privilege = 3,
+            .present = true,
         },
     );
 
@@ -163,12 +195,15 @@ var gdt_entries = init: {
     res[4] = GdtEntry.new(
         0x0,
         0xFFFFF,
-        .{},
+        .{ .is_32_bit = true },
         .{
+            .accessed = true,
             .read_write = true,
             .dc = false,
             .executable = false,
+            .system = true,
             .privilege = 3,
+            .present = true,
         },
     );
 
@@ -179,28 +214,6 @@ var gdt_ptr: GdtPtr = .{
     .limit = @intCast((gdt_entries.len * @sizeOf(GdtEntry)) - 1),
     .base = undefined,
 };
-
-pub fn init() void {
-    log.debug("Initializing GDT", .{});
-    defer log.debug("Finished initializing GDT", .{});
-    gdt_ptr.base = @intFromPtr(&gdt_entries[0]);
-
-    gdt_entries[5] = GdtEntry.new(
-        @intFromPtr(&main_tss),
-        @sizeOf(Tss) - 1,
-        .{ .granularity = true },
-        .{
-            .accessed = true,
-            .read_write = false,
-            .dc = false,
-            .executable = true,
-            .system = false,
-            .privilege = 0,
-        },
-    );
-
-    lgdt(&gdt_ptr);
-}
 
 /// Task state segment
 pub const Tss = packed struct(u864) {
