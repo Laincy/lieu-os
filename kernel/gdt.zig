@@ -3,8 +3,8 @@ const log = std.log.scoped(.gdt);
 
 /// Initializes our GDT
 pub fn init() void {
-    log.debug("Initializing GDT", .{});
-    defer log.debug("Finished initializing GDT", .{});
+    log.info("Initializing GDT", .{});
+    defer log.info("Finished initializing GDT", .{});
 
     gdt_ptr.base = @intFromPtr(&gdt_entries[0]);
 

@@ -2,20 +2,23 @@ const std = @import("std");
 const builtin = @import("builtin");
 
 const gdt = @import("gdt.zig");
+const pmm = @import("pmm.zig");
 
 comptime {
     _ = @import("boot.zig");
 }
 
 /// When this is jumped to, we are in the upper half with a minimal page dir
-export fn kmain(mbi_phys_addr: u32) noreturn {
+export fn kmain(mbi_phys_addr: u32) callconv(.c) noreturn {
     const log = std.log.scoped(.kmain);
-
-    _ = mbi_phys_addr;
 
     log.info("Jumped to higher half, beginning initialization", .{});
 
     gdt.init();
+
+    _ = pmm.init(mbi_phys_addr) catch {
+        @panic("Couldn't initialize PMM");
+    };
 
     log.info("Kernel initialization finished, entering event loop...", .{});
     while (true) {}
